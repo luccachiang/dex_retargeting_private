@@ -1,0 +1,28 @@
+retargeting:
+  type: vector
+  urdf_path: xhand/xhand_left.urdf
+
+  # Target refers to the retargeting target, which is the robot hand
+  target_joint_names: [ 
+    'left_hand_thumb_rota_joint1', 'left_hand_thumb_rota_joint2', 'left_hand_thumb_rota_joint3',
+    'left_hand_index_joint1', 'left_hand_index_joint2', 'left_hand_index_rota_joint3',
+    'left_hand_mid_joint1', 'left_hand_mid_joint2', 'left_hand_mid_joint3',
+    'left_hand_ring_joint1', 'left_hand_ring_joint2', 'left_hand_ring_joint3',
+    'left_hand_pinky_joint1', 'left_hand_pinky_joint2', 'left_hand_pinky_joint3'
+  ]
+  target_origin_link_names: [ "base_link", "base_link", "base_link", "base_link", "base_link" ]
+  target_task_link_names: [ 
+    "left_hand_thumb_rota_tip", 
+    "left_hand_index_rota_tip", 
+    "left_hand_mid_tip", 
+    "left_hand_ring_tip", 
+    "left_hand_pinky_tip" 
+  ]
+  scaling_factor: 1.0
+
+  # Source refers to the retargeting input, which usually corresponds to the human hand
+  # The joint indices of human hand joint which corresponds to each link in the target_link_names
+  target_link_human_indices: [ [ 0, 0, 0, 0, 0 ], [ 4, 8, 12, 16, 20 ] ]
+
+  # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
+  low_pass_alpha: 0.2
