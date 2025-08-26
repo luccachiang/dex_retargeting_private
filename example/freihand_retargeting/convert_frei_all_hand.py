@@ -55,7 +55,7 @@ def run_convert_frei_for_robot(
             cwd=Path(__file__).parent,
             capture_output=True,
             text=True,
-            timeout=3600  # 1 hour timeout
+            timeout=36000  # 1 hour timeout
         )
         end_time = time.time()
         
@@ -177,14 +177,14 @@ def run_parallel_convert_frei(
     print(f"\nDetailed results:")
     for i, (robot_name, success) in enumerate(zip(robot_names, results)):
         status = "✓ Success" if success else "✗ Failed"
-        print(f"  {i+1:2d}. {robot_name.value}: {status}")
+        print(f"  {i+1:2d}. {robot_name}: {status}")
     
     # Save execution log
     log_file = Path(output_dir) / "execution_log.txt"
     with open(log_file, "w") as f:
         f.write(f"Execution time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"FreiHAND dataset path: {freihand_dataset_path}\n")
-        f.write(f"Robot list: {[r.value for r in robot_names]}\n")
+        f.write(f"Robot list: {[r for r in robot_names]}\n")
         f.write(f"Max parallel processes: {max_workers}\n")
         f.write(f"Total elapsed time: {end_time - start_time:.2f} seconds\n")
         f.write(f"Success: {successful}\n")
@@ -194,7 +194,7 @@ def run_parallel_convert_frei(
         f.write("Detailed results:\n")
         for i, (robot_name, success) in enumerate(zip(robot_names, results)):
             status = "Success" if success else "Failed"
-            f.write(f"  {i+1:2d}. {robot_name.value}: {status}\n")
+            f.write(f"  {i+1:2d}. {robot_name}: {status}\n")
     
     print(f"\nExecution log saved to: {log_file}")
     
