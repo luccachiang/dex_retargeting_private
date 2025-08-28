@@ -100,7 +100,7 @@ def load_robot_in_scene(scene, config_path):
     elif "svh" in robot_name:
         loader.scale = 1.5
 
-    if "glb" not in robot_name:
+    if "glb" not in robot_name and "inspire" not in robot_name:
         filepath = str(filepath).replace(".urdf", "_glb.urdf")
     else:
         filepath = str(filepath)
@@ -141,6 +141,17 @@ def create_comparison_image(original_image, detected_keypoints_2d, rendered_robo
     if detected_keypoints_2d is not None and len(detected_keypoints_2d) > 0:
         # Draw hand keypoints as in enhanced_compare_freihand_detection.py
         plot_hand(axes[1], detected_keypoints_2d, color_fixed='red', linewidth=2, order='uv')
+        
+        # Add index labels beside each keypoint
+        for idx, (x, y) in enumerate(detected_keypoints_2d):
+            axes[1].text(
+                x + 2, y + 2,  # small offset so text doesn't overlap point
+                str(idx),
+                fontsize=8,
+                color='yellow',
+                bbox=dict(facecolor='black', alpha=0.5, edgecolor='none', boxstyle='round,pad=0.2')
+            )
+        
     axes[1].set_title('Original + GT Keypoints', fontsize=12, color='red')
     axes[1].axis('off')
     

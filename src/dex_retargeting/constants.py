@@ -4,6 +4,8 @@ from typing import Optional
 
 import numpy as np
 
+DEX_RETARGETING_PATH = (Path(__file__).parent / "../..").resolve()
+
 OPERATOR2MANO_RIGHT = np.array(
     [
         [0, 0, -1],

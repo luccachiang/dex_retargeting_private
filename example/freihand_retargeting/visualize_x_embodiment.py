@@ -16,10 +16,8 @@ import viser
 from viser.extras import ViserUrdf
 
 # Import dex_retargeting modules for proper joint mapping
-from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path
+from dex_retargeting.constants import RobotName, RetargetingType, HandType, get_default_config_path, DEX_RETARGETING_PATH
 from dex_retargeting.retargeting_config import RetargetingConfig
-
-DEX_RETARGETING_PATH = "/home/jusheng/jinzhou/dex-retargeting"
 
 
 @dataclass
