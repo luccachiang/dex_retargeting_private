@@ -17,3 +17,5 @@ imgui.ini
 /temp/
 *.egg-info
 data/
+
+*.png
