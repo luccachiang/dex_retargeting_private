@@ -339,20 +339,18 @@ class MultiRobotDatasetController:
         slider_handles = self.slider_handles.get(robot_id, [])
         
         # Get joint mapping information if available
-        sp2urdf = getattr(self, 'joint_mappings', {}).get(robot_id, None) # xhand array([ 9, 10, 11,  0,  1,  2,  3,  4,  7,  8,  5,  6])
+        # mapping the retargeting dataset qpos to only hand actuated joints position
+        rt_data_qpos2actuated_q = getattr(self, 'joint_mappings', {}).get(robot_id, None) # xhand array([ 9, 10, 11,  0,  1,  2,  3,  4,  7,  8,  5,  6])
         
-        if sp2urdf is not None:
-            # Apply joint mapping like in Sapien
-            # The mapping is from retargeting joint names to sapien joint names
-            # We need to map retargeting_qpos to sapien_qpos
-            urdf_positions = [] # urdf position
-            for sapien_idx, retargeting_idx in enumerate(sp2urdf):
-                if retargeting_idx >= 0 and retargeting_idx < len(joint_positions):
-                    urdf_positions.append(joint_positions[retargeting_idx]) # joint_positions is from dataset, which is sapien joint seq
+        if rt_data_qpos2actuated_q is not None:
+            actuated_idxes = [] # actuated position in the retargetting saved data
+            for _, actuated_idx in enumerate(rt_data_qpos2actuated_q):
+                if actuated_idx >= 0 and actuated_idx < len(joint_positions):
+                    actuated_idxes.append(joint_positions[actuated_idx]) # joint_positions is from dataset, which is sapien joint seq
                 else:
                     # Use default value (0.0) for missing joints
-                    urdf_positions.append(0.0)
-            joint_positions = urdf_positions # sapien joint seq to urdf joint seq
+                    actuated_idxes.append(0.0)
+            joint_positions = actuated_idxes # sapien joint seq to urdf joint seq
         else:
             # Fallback: ensure we don't exceed the number of available joints
             num_joints = len(slider_handles)
