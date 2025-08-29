@@ -56,6 +56,7 @@ Now, we will set up manopth similar to how it is done in [dex-ycb-toolkit](https
     ```shell
     cd manopth
     pip install -e .
+    wget https://github.com/JonathanLehner/Colab-collection/releases/download/MANO/mano_v1_2.zip
     unzip mano_v1_2.zip
     cd mano
     ln -s ../mano_v1_2/models models
