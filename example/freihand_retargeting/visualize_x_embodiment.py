@@ -338,25 +338,21 @@ class MultiRobotDatasetController:
         viser_urdf = self.robots[robot_id]
         slider_handles = self.slider_handles.get(robot_id, [])
         
-        print("robot_id: ", robot_id)
-        print("num of joints: ", len(joint_positions))
-        print("num of slider handles: ", len(slider_handles))
-        
         # Get joint mapping information if available
-        joint_mapping = getattr(self, 'joint_mappings', {}).get(robot_id, None)
+        sp2urdf = getattr(self, 'joint_mappings', {}).get(robot_id, None) # xhand array([ 9, 10, 11,  0,  1,  2,  3,  4,  7,  8,  5,  6])
         
-        if joint_mapping is not None:
+        if sp2urdf is not None:
             # Apply joint mapping like in Sapien
             # The mapping is from retargeting joint names to sapien joint names
             # We need to map retargeting_qpos to sapien_qpos
-            sapien_positions = []
-            for sapien_idx, retargeting_idx in enumerate(joint_mapping):
+            urdf_positions = [] # urdf position
+            for sapien_idx, retargeting_idx in enumerate(sp2urdf):
                 if retargeting_idx >= 0 and retargeting_idx < len(joint_positions):
-                    sapien_positions.append(joint_positions[retargeting_idx])
+                    urdf_positions.append(joint_positions[retargeting_idx]) # joint_positions is from dataset, which is sapien joint seq
                 else:
                     # Use default value (0.0) for missing joints
-                    sapien_positions.append(0.0)
-            joint_positions = sapien_positions
+                    urdf_positions.append(0.0)
+            joint_positions = urdf_positions # sapien joint seq to urdf joint seq
         else:
             # Fallback: ensure we don't exceed the number of available joints
             num_joints = len(slider_handles)
@@ -596,7 +592,7 @@ def create_hand_configs_from_dataset(dataset_path: str, selected_hands: Optional
             'urdf_path': os.path.join(DEX_RETARGETING_PATH, 'assets/robots/hands', 'ability_hand', "ability_hand_right_glb.urdf"),
             'position': (0.3, 0.6, 0.0),
             'robot_name': RobotName.ability,
-            'retargeting_type': RetargetingType.dexpilot,
+            'retargeting_type': RetargetingType.dexpilot, # vector and dexpilot are same, position is different
             'hand_type': HandType.right
         },
         'allegro': {
@@ -640,13 +636,21 @@ def create_hand_configs_from_dataset(dataset_path: str, selected_hands: Optional
             'hand_type': HandType.right
         },
         'xhand': {
-            'name': 'XHand',
+            'name': 'XHand Hand',
             'urdf_path': os.path.join(DEX_RETARGETING_PATH, 'assets/robots/hands', 'xhand', "xhand_right_glb.urdf"),
             'position': (0.3, 0.3, 0.0),
             'robot_name': RobotName.xhand,
             'retargeting_type': RetargetingType.dexpilot,
             'hand_type': HandType.right
-        }
+        },
+        'inspire': {
+            'name': 'Inspire Hand',
+            'urdf_path': os.path.join(DEX_RETARGETING_PATH, 'assets/robots/hands', 'inspire_hand', "inspire_hand_right_glb.urdf"),
+            'position': (0.3, 0.0, 0.0),
+            'robot_name': RobotName.inspire,
+            'retargeting_type': RetargetingType.dexpilot,
+            'hand_type': HandType.right
+        },
     }
     
     hand_configs = []

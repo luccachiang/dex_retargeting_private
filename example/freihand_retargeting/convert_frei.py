@@ -53,7 +53,10 @@ def retarget_joint_pos_to_qpos(joint_pos, retargeting):
         task_indices = indices[1, :]
         ref_value = joint_pos[task_indices, :] - joint_pos[origin_indices, :]
     
-    qpos = retargeting.retarget(ref_value)
+    qpos = retargeting.retarget(ref_value) # may have joints more than only actuated joints
+    # usually vector/dexpilot have same setting, and position has a different setting
+    # use retargeting.optimizer.__dict__ to inspect
+    # if not only save actuated joints here, we need to process later in the dataloader
     return qpos
 
 
@@ -84,7 +87,7 @@ def load_robot_in_scene(scene, config_path):
     elif "xhand" in robot_name:
         loader.scale = 1.5
 
-    if "glb" not in robot_name and "inspire" not in robot_name:
+    if "glb" not in robot_name:
         filepath = str(filepath).replace(".urdf", "_glb.urdf")
     else:
         filepath = str(filepath)
@@ -200,9 +203,9 @@ def process_single_sample(
     # Create result
     result = {
         'image_id': image_id,
-        'joint_pos': joint_pos,
+        'joint_pos': joint_pos, # human hand (21, 3)
         'qpos': qpos,
-        'keypoint_2d': keypoint_2d,
+        'keypoint_2d': keypoint_2d, # (21, 2)
         'is_augmented': sample_data.get('is_augmented', False),
         'split': sample_data.get('split', 'unknown')
     }

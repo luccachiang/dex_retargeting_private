@@ -50,11 +50,12 @@ python convert_frei_multihand_runner.py \
     --hand-type right \
     --max-workers 8 \
     --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
+    --retargeting-type position
     # --save-images
     # --max-samples 10
 ```
 
 ### Data visualization
 ```bash
-python visualize_x_embodiment.py --dataset-path <path2retargetted_dataset>
+python visualize_x_embodiment.py --dataset-path <path2retargetted_dataset> --hands xhand ability inspire
 ```
