@@ -1,3 +1,5 @@
+For our project docs, refer [here](./docs/).
+
 <div align="center">
   <h1 align="center"> Dex Retargeting </h1>
   <h3 align="center">

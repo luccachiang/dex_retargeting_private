@@ -1,4 +1,5 @@
 ## FreiHAND Retargeting Whole Pipeline
+All the code is under [`example/freihand_retargeting`](../example/freihand_retargeting/).
 
 ### Download FreiHAND Dataset
 Download from [official website](https://lmb.informatik.uni-freiburg.de/resources/datasets/FreihandDataset.en.html). Unzip and put it under `dex-retargeting/data`.
