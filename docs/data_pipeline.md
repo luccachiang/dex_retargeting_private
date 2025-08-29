@@ -25,21 +25,32 @@ python augment_freihand_dataset.py --freihand-dataset-path /home/guangqi/wanglab
 ```
 
 ### Generate X-embodiment Retargeting Data
+TODO how to deal with left hand?
 ```bash
-
-python convert_frei.py \
+python convert_frei_runner.py \
     --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
     --robot-name xhand \
     --retargeting-type position \
     --hand_type right \
-    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_processed \
+    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
     --save_images
 
-# TODO how to deal with hand type
-python convert_frei_all_hand.py \
-    --freihand_dataset_path /home/guangqi/wanglab/dex-retargeting/data/freihand \
-    --max-workers 1 \
-    --save-images
+# python convert_frei_jinzhou.py \
+#     --freihand-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand \
+#     --robot-name xhand \
+#     --retargeting-type position \
+#     --hand_type right \
+#     --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
+#     --save_images
+
+python convert_frei_multihand_runner.py \
+    --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
+    --robot-names xhand ability inspire \
+    --hand-type right \
+    --max-workers 8 \
+    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
+    # --save-images
+    # --max-samples 10
 ```
 
 ### Data visualization

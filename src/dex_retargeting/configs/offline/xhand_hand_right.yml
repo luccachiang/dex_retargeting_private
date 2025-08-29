@@ -25,12 +25,12 @@ retargeting:
     "right_hand_ring_tip", 
     "right_hand_pinky_tip",
     # "right_hand_pinkyback_link2", # 19
-    "right_hand_pinkyback_link1", # 18
+    # "right_hand_pinkyback_link1", # 18
   ]
 
   # Source refers to the retargeting input, which usually corresponds to the human hand
   # The joint indices of human hand joint which corresponds to each link in the target_link_names
-  target_link_human_indices: [ 4, 8, 12, 16, 20, 19 ]
+  target_link_human_indices: [ 4, 8, 12, 16, 20 ]
 
   # A smaller alpha means stronger filtering, i.e. more smooth but also larger latency
   low_pass_alpha: 0.2

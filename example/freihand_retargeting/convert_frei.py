@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """
-Convert FreiHAND images to DexHand format
+Retarget processed hand pose dataset to specific robot hands
+This script reads the preprocessed and augmented dataset and retargets 
+it to a specific robot embodiment.
 """
-
 from pathlib import Path
 import numpy as np
-import cv2
 import sapien
 from sapien.asset import create_dome_envmap
 import matplotlib.pyplot as plt
 import tyro
 from tqdm import tqdm
 import pickle
+from scipy.spatial.transform import Rotation as R
+import copy
+import cv2
 
 from dex_retargeting.constants import (
     RobotName,
@@ -22,9 +25,9 @@ from dex_retargeting.constants import (
 from dex_retargeting.retargeting_config import RetargetingConfig
 from dex_retargeting.seq_retarget import SeqRetargeting
 
-from convert_xyz3d_to_joint_pos import convert_xyz3d_to_joint_pos
-
 # Import sapien utilities
+import sapien.core as sapien
+sapien.set_log_level("error") # filter out warnings
 from sapien_utils import (
     reset_sapien_scene,
     destroy_sapien_objects,
@@ -35,29 +38,8 @@ from sapien_utils import (
 
 import sys
 sys.path.append(str(Path(__file__).parent / "freihand"))
-from freihand.utils.fh_utils import read_img, plot_hand, projectPoints, load_db_annotation
+from freihand.utils.fh_utils import plot_hand
 
-def load_image(image_path, annotations):
-    """Load image"""
-    if not Path(image_path).exists():
-        raise FileNotFoundError(f"Image file does not exist: {image_path}")
-
-    anno = [annotations[i] for i in range(len(annotations)) if i == int(Path(image_path).stem)][0]
-    K, mano_params, xyz_3d = anno
-    K = np.array(K)
-    xyz_3d = np.array(xyz_3d)
-    keypoint_2d = projectPoints(xyz_3d, K)
-    joint_pos = convert_xyz3d_to_joint_pos(xyz_3d, 'Right')
-
-    # Read image
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError(f"Cannot read image: {image_path}")
-    
-    # BGR to RGB
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
-    return image, image_rgb, joint_pos, keypoint_2d
 
 def retarget_joint_pos_to_qpos(joint_pos, retargeting):
     """Convert joint_pos to robot qpos"""
@@ -99,6 +81,8 @@ def load_robot_in_scene(scene, config_path):
         loader.scale = 1.4
     elif "svh" in robot_name:
         loader.scale = 1.5
+    elif "xhand" in robot_name:
+        loader.scale = 1.5
 
     if "glb" not in robot_name and "inspire" not in robot_name:
         filepath = str(filepath).replace(".urdf", "_glb.urdf")
@@ -123,25 +107,35 @@ def load_robot_in_scene(scene, config_path):
         robot.set_pose(sapien.Pose([0, 0, -0.13]))
     elif "inspire" in robot_name:
         robot.set_pose(sapien.Pose([0, 0, -0.15]))
+    elif "xhand" in robot_name:
+        robot.set_pose(sapien.Pose([0, 0, -0.15]))
 
     return robot, config
 
 
 def create_comparison_image(original_image, detected_keypoints_2d, rendered_robot, image_name, save_path=None):
-    """Create comparison image of original + rendered robot (following enhanced_compare_freihand_detection.py style)"""
+    """Create comparison image of original + rendered robot"""
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     
-    # Original image
-    axes[0].imshow(original_image)
-    axes[0].set_title('Original Image', fontsize=12)
+    if original_image is not None:
+        original_image = cv2.cvtColor(cv2.imread(original_image), cv2.COLOR_BGR2RGB)
+    
+    # Original image (if available)
+    if original_image is not None:
+        axes[0].imshow(original_image)
+        axes[0].set_title('Original Image', fontsize=12)
+    else:
+        axes[0].text(0.5, 0.5, 'No Image\n(Augmented Sample)', 
+                    ha='center', va='center', fontsize=14, 
+                    transform=axes[0].transAxes)
+        axes[0].set_title('Augmented Sample', fontsize=12)
     axes[0].axis('off')
     
-    # Original + detected keypoints (using plot_hand)
-    axes[1].imshow(original_image)
-    if detected_keypoints_2d is not None and len(detected_keypoints_2d) > 0:
-        # Draw hand keypoints as in enhanced_compare_freihand_detection.py
-        plot_hand(axes[1], detected_keypoints_2d, color_fixed='red', linewidth=2, order='uv')
-        
+    # Original + detected keypoints (if image is available)
+    if original_image is not None:
+        axes[1].imshow(original_image)
+        if detected_keypoints_2d is not None and len(detected_keypoints_2d) > 0:
+            plot_hand(axes[1], detected_keypoints_2d, color_fixed='red', linewidth=2, order='uv')
         # Add index labels beside each keypoint
         for idx, (x, y) in enumerate(detected_keypoints_2d):
             axes[1].text(
@@ -151,8 +145,12 @@ def create_comparison_image(original_image, detected_keypoints_2d, rendered_robo
                 color='yellow',
                 bbox=dict(facecolor='black', alpha=0.5, edgecolor='none', boxstyle='round,pad=0.2')
             )
-        
-    axes[1].set_title('Original + GT Keypoints', fontsize=12, color='red')
+        axes[1].set_title('Original + GT Keypoints', fontsize=12, color='red')
+    else:
+        axes[1].text(0.5, 0.5, 'No Image\n(Augmented Sample)', 
+                    ha='center', va='center', fontsize=14, 
+                    transform=axes[1].transAxes)
+        axes[1].set_title('Augmented Sample', fontsize=12)
     axes[1].axis('off')
     
     # Rendered robot hand
@@ -169,153 +167,193 @@ def create_comparison_image(original_image, detected_keypoints_2d, rendered_robo
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         plt.close()
-        print(f"Comparison image saved: {save_path}")
+        # print(f"Comparison image saved: {save_path}")
     else:
         plt.show()
 
-def process_single_image(
-    image_path: str,
-    robot_name: RobotName = RobotName.allegro,
-    retargeting_type: RetargetingType = RetargetingType.vector,
-    hand_type: HandType = HandType.right,
-    output_dir: str = "single_image_output",
-    hand_detector_type: str = "Right",
-    save_images: bool = False,
-    annotations: list = None,
+
+def process_single_sample(
+    sample_data: dict,
+    retargeting,
+    robot=None,
+    scene=None,
+    cam=None,
+    retargeting_joint_names=None,
+    output_dir=None,
+    save_images: bool = False
 ):
-    """Process a single image: hand detection, retargeting, rendering"""
+    """Process a single sample: retargeting and optional rendering"""
     
-    print(f"=== Single Image Processing ===")
-    print(f"Image path: {image_path}")
-    print(f"Robot: {robot_name}")
-    print(f"Retargeting type: {retargeting_type}")
-    print(f"Hand type: {hand_type}")
-    print(f"HandDetector type: {hand_detector_type}")
+    # Extract data
+    joint_pos = sample_data['joint_pos']
+    keypoint_2d = sample_data['keypoint_2d']
+    image = sample_data.get('image', None)
+    image_id = sample_data['image_id']
     
-    # Set output directory
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    # Retarget to robot
+    # Each time we init the retargeting, it will have a last_qpos. 
+    # If the qpos is not a sequential trajectory, like here we use a dataset, call reset to remove the influence of history qpos.
+    # retargeting.reset()
+    # TODO reset has different results from init a new instance
+    qpos = retarget_joint_pos_to_qpos(joint_pos, retargeting)
 
-    config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
-    robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
-    RetargetingConfig.set_default_urdf_dir(str(robot_dir))
-    
-    if save_images:
-        scene, cam = create_clean_sapien_scene()
-        robot, config = load_robot_in_scene(scene, config_path)
-    
-    # 1. Load image
-    print("\n1. Loading image...")
-    image, image_rgb, joint_pos_gt, keypoint_2d_gt = load_image(image_path, annotations)
-    
-    image_name = Path(image_path).stem
-    print(f"Image shape: {image_rgb.shape}")
-    
-    # # 2. Hand detection
-    # print("\n2. Detecting hand...")
-    # detector, joint_pos, keypoint_2d, mediapipe_wrist_rot = detect_hand(image_rgb, hand_detector_type)
-    # print(f"Detected joint position range: [{joint_pos.min():.4f}, {joint_pos.max():.4f}]")
-    
-    # # Convert detected keypoints to numpy array (as in enhanced_compare_freihand_detection.py)
-    # img_height, img_width = image_rgb.shape[:2]
-    # detected_keypoints_2d = detector.parse_keypoint_2d(keypoint_2d, (img_height, img_width))
-    
-    # 3. Set retargeting
-    print("\n3. Setting retargeting...")
-    retargeting = RetargetingConfig.load_from_file(config_path).build()
-    
-    # 4. Retargeting
-    print("\n4. Retargeting...")
-    # qpos = retarget_joint_pos_to_qpos(joint_pos, retargeting)
-    qpos_gt = retarget_joint_pos_to_qpos(joint_pos_gt, retargeting)
-    print(f"Retargeting result range: [{qpos_gt.min():.4f}, {qpos_gt.max():.4f}]")
-    
-    if save_images:
-        # 5. Render robot
-        print("\n5. Rendering robot...")
-        
-        # Get joint names
-        retargeting_joint_names = retargeting.optimizer.robot.dof_joint_names
-        
-        # Render robot
-        # rendered_robot = safe_render_robot(scene, cam, robot, qpos, retargeting_joint_names)
-
-        rendered_robot_gt = safe_render_robot(scene, cam, robot, qpos_gt, retargeting_joint_names)
-        
-        # Clean up sapien resources
-        reset_sapien_scene(scene)
-        destroy_sapien_objects(scene, cam, robot, config)
-        cleanup_sapien_resources()
-
-        # 6. Create comparison image and save
-        print("\n6. Creating comparison image...")
-        # comparison_path = output_path / f"{image_name}_comparison.png"
-        # create_comparison_image(image_rgb, detected_keypoints_2d, rendered_robot, image_name, str(comparison_path))
-        
-        # 6.1 Create comparison image (using freihand's plot_hand)
-        comparison_path = output_path / "images" / image_name
-        create_comparison_image(image_rgb, keypoint_2d_gt, rendered_robot_gt, image_name, str(comparison_path))
-
-        print(f"\n=== Processing finished ===")
-        print(f"Output directory: {output_path}")
-        print(f"Comparison image: {comparison_path}")
-    
-    return {
-        'image_id': int(Path(image_path).stem),
-        'joint_pos': joint_pos_gt,
-        'qpos': qpos_gt,
-        'keypoint_2d': keypoint_2d_gt,
+    # Create result
+    result = {
+        'image_id': image_id,
+        'joint_pos': joint_pos,
+        'qpos': qpos,
+        'keypoint_2d': keypoint_2d,
+        'is_augmented': sample_data.get('is_augmented', False),
+        'split': sample_data.get('split', 'unknown')
     }
+    
+    # Render robot if requested
+    if save_images and robot is not None and scene is not None:
+        rendered_robot = safe_render_robot(scene, cam, robot, qpos, retargeting_joint_names)
+        
+        # Create comparison image
+        image_name = f"{image_id:08d}"
+        if sample_data.get('is_augmented', False):
+            image_name += "_aug"
+        
+        comparison_path = Path(output_dir) / "images" / f"{image_name}_comparison.png"
+        comparison_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        create_comparison_image(image, keypoint_2d, rendered_robot, image_name, str(comparison_path))
+    
+    return result
 
 
 def main(
-    freihand_dataset_path: str,
+    processed_dataset_path: str,
     robot_name: RobotName = RobotName.allegro,
     retargeting_type: RetargetingType = RetargetingType.vector,
     hand_type: HandType = HandType.right,
     save_images: bool = False,
-    output_dir: str = "freihand_to_dexhand"
+    output_dir: str = "retargeted_dataset",
+    max_samples: int = None
 ):
     """
-    Single image hand detection, retargeting, and rendering
+    Retarget processed dataset to specific robot hand
     
     Args:
-        freihand_dataset_path: FreiHAND dataset path
+        processed_dataset_path: Path to processed dataset pickle file
         robot_name: Robot name (allegro, shadow, dclaw, ability, bhand, leap, svh, inspire)
         retargeting_type: Retargeting type (vector, position)
         hand_type: Hand type (right, left)
-        save_images: Whether to save images
+        save_images: Whether to save comparison images
         output_dir: Output directory
+        max_samples: Maximum number of samples to process (None for all)
     """
     
     try:
-        # 2. Load FreiHAND annotations to get sample indices
-        print("\nLoading FreiHAND annotations...")
-        annotations = list(load_db_annotation(freihand_dataset_path, 'training'))
-        total_samples = len(annotations)
-        print(f"Number of samples in FreiHAND dataset: {total_samples}")
-
-        output_pkl_path = Path(output_dir) / f"results_{robot_name.value}_{retargeting_type.value}_{hand_type.value}.pkl"
-        results = []
-
+        print(f"=== Retargeting to {robot_name.name} ===")
+        print(f"Retargeting type: {retargeting_type}")
+        print(f"Hand type: {hand_type}")
+        
+        # Load processed dataset
+        print(f"\nLoading processed dataset from: {processed_dataset_path}")
+        with open(processed_dataset_path, 'rb') as f:
+            dataset_info = pickle.load(f)
+        
+        # Handle both old format (direct list) and new format (with metadata)
+        if isinstance(dataset_info, dict) and 'data' in dataset_info:
+            processed_data = dataset_info['data']
+            metadata = dataset_info.get('metadata', {})
+            print(f"Dataset metadata found:")
+            for key, value in metadata.items():
+                print(f"  {key}: {value}")
+        else:
+            # Old format - direct list
+            processed_data = dataset_info
+            print("Dataset loaded (old format without metadata)")
+        
+        total_samples = len(processed_data)
+        if max_samples is not None:
+            total_samples = min(total_samples, max_samples)
+            processed_data = processed_data[:total_samples]
+        
+        print(f"Dataset loaded: {total_samples} samples")
+        
+        # Count sample types
+        original_count = sum(1 for d in processed_data if not d.get('is_augmented', False))
+        augmented_count = sum(1 for d in processed_data if d.get('is_augmented', False))
+        print(f"Original samples: {original_count}")
+        print(f"Augmented samples: {augmented_count}")
+        
+        # Set up retargeting
+        config_path = get_default_config_path(robot_name, retargeting_type, hand_type)
+        print(config_path)
+        robot_dir = Path(__file__).absolute().parent.parent.parent / "assets" / "robots" / "hands"
+        RetargetingConfig.set_default_urdf_dir(str(robot_dir))
+        
+        
+        # Set up rendering if needed
+        robot = None
+        scene = None
+        cam = None
+        
         if save_images:
-            images_dir = Path(output_dir) / "images"
-            images_dir.mkdir(parents=True, exist_ok=True)
-            print(f"Images will be saved to: {images_dir}")
+            print("Setting up rendering...")
+            scene, cam = create_clean_sapien_scene()
+            robot, config = load_robot_in_scene(scene, config_path)
+        
+        # Process all samples
+        print(f"\nProcessing {total_samples} samples...")
+        results = []
+        
+        for i in tqdm(range(total_samples), desc="Retargeting samples"):
+            sample_data = processed_data[i]
 
-        for i in tqdm(range(total_samples), desc="Processing images"):
-            idx = f"{i:08d}"
-            image_path = Path(freihand_dataset_path) / "training" / "rgb" / f"{idx}.jpg"
-            result = process_single_image(image_path, robot_name, retargeting_type, hand_type, output_dir, save_images=save_images, annotations=annotations)
+            # need to new a retargeting in each iter
+            retargeting = RetargetingConfig.load_from_file(config_path).build()
+            retargeting_joint_names = retargeting.optimizer.robot.dof_joint_names
+            
+            result = process_single_sample(
+                sample_data=sample_data,
+                retargeting=retargeting,
+                robot=robot,
+                scene=scene,
+                cam=cam,
+                retargeting_joint_names=retargeting_joint_names,
+                output_dir=output_dir,
+                save_images=save_images
+            )
+            
             results.append(result)
+        
+        # Clean up rendering resources
+        if save_images:
+            print("Cleaning up rendering resources...")
+            reset_sapien_scene(scene)
+            destroy_sapien_objects(scene, cam, robot, config)
+            cleanup_sapien_resources()
+        
+        # Save results
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        output_pkl_path = output_path / f"retargeted_{robot_name.name}_{retargeting_type.name}_{hand_type.name}.pkl"
         
         with open(output_pkl_path, "wb") as f:
             pickle.dump(results, f)
-
-        print("\n✓ Processing completed successfully!")
+        
+        print(f"\n✓ Retargeting completed successfully!")
+        print(f"Results saved to: {output_pkl_path}")
+        
+        if save_images:
+            images_dir = output_path / "images"
+            print(f"Images saved to: {images_dir}")
+        
+        # Print final statistics
+        print(f"\nFinal Statistics:")
+        print(f"Total processed samples: {len(results)}")
+        print(f"Robot: {robot_name.name}")
+        print(f"Retargeting type: {retargeting_type.name}")
+        print(f"Hand type: {hand_type.name}")
         
     except Exception as e:
-        print(f"\n❌ Processing failed: {e}")
+        print(f"\n❌ Retargeting failed: {e}")
         import traceback
         traceback.print_exc()
         return 1
