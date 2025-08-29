@@ -590,7 +590,7 @@ def create_hand_configs_from_dataset(dataset_path: str, selected_hands: Optional
             'urdf_path': os.path.join(DEX_RETARGETING_PATH, 'assets/robots/hands', 'ability_hand', "ability_hand_right_glb.urdf"),
             'position': (0.3, 0.6, 0.0),
             'robot_name': RobotName.ability,
-            'retargeting_type': RetargetingType.dexpilot, # vector and dexpilot are same, position is different
+            'retargeting_type': RetargetingType.dexpilot, # see dataset metadata, vector and dexpilot are same, position is different
             'hand_type': HandType.right
         },
         'allegro': {
