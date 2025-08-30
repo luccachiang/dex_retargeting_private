@@ -584,6 +584,7 @@ def create_hand_configs_from_dataset(dataset_path: str, selected_hands: Optional
     dataset_path = Path(dataset_path)
     
     # Mapping of directory names to robot configurations
+    # TODO replace r and l
     robot_mappings = {
         'ability': {
             'name': 'Ability Hand',

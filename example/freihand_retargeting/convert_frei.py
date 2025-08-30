@@ -183,13 +183,22 @@ def process_single_sample(
     cam=None,
     retargeting_joint_names=None,
     output_dir=None,
-    save_images: bool = False
+    save_images: bool = False,
+    hand_type: HandType = HandType.right,
 ):
     """Process a single sample: retargeting and optional rendering"""
     
     # Extract data
     joint_pos = sample_data['joint_pos']
     keypoint_2d = sample_data['keypoint_2d']
+    # add right2left mirror
+    if hand_type == HandType.left:
+        raise NotImplementedError("Left hand mirroring doesn't work so far.")
+        joint_pos = copy.deepcopy(joint_pos)
+        joint_pos[:, 0] = -joint_pos[:, 0]
+        if keypoint_2d is not None:
+            keypoint_2d = copy.deepcopy(keypoint_2d)
+            keypoint_2d[:, 0] = -keypoint_2d[:, 0]
     image = sample_data.get('image', None)
     image_id = sample_data['image_id']
     
@@ -320,7 +329,8 @@ def main(
                 cam=cam,
                 retargeting_joint_names=retargeting_joint_names,
                 output_dir=output_dir,
-                save_images=save_images
+                save_images=save_images,
+                hand_type=hand_type,
             )
             
             results.append(result)

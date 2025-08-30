@@ -57,5 +57,18 @@ python convert_frei_multihand_runner.py \
 
 ### Data visualization
 ```bash
-python visualize_x_embodiment.py --dataset-path <path2retargetted_dataset> --hands xhand ability inspire
+python visualize_x_embodiment.py --dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting --hands xhand ability inspire
+```
+
+### Get left hand data
+TODO This doesn't work so far. Instead, directly apply the right hand retargeting qpos to left hand qpos.
+Convert right hand data to left hand data.
+```bash
+python convert_frei_runner.py \
+    --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
+    --robot-name xhand \
+    --retargeting-type vector \
+    --hand_type left \
+    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_left_retargeting \
+    --save_images
 ```
