@@ -31,9 +31,9 @@ TODO how to deal with left hand?
 python convert_frei_runner.py \
     --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
     --robot-name xhand \
-    --retargeting-type position \
+    --retargeting-type dexpilot \
     --hand_type right \
-    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
+    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting_finger_scaled \
     --save_images
 
 # python convert_frei_jinzhou.py \
@@ -46,11 +46,11 @@ python convert_frei_runner.py \
 
 python convert_frei_multihand_runner.py \
     --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
-    --robot-names xhand ability inspire \
     --hand-type right \
-    --max-workers 8 \
-    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting \
-    --retargeting-type position
+    --max-workers 16 \
+    --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting_finger_scaled \
+    --retargeting-type dexpilot
+    # --robot-names xhand ability inspire \
     # --save-images
     # --max-samples 10
 ```

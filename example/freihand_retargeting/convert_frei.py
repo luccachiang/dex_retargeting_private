@@ -190,6 +190,10 @@ def process_single_sample(
     
     # Extract data
     joint_pos = sample_data['joint_pos']
+    # do finger scale, code adapted from lai
+    joint_pos[1:5] *= 1.02
+    joint_pos[5:9] *= 1.02
+    joint_pos[17:21] *= 1.2
     keypoint_2d = sample_data['keypoint_2d']
     # add right2left mirror
     if hand_type == HandType.left:

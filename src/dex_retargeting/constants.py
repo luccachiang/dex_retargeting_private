@@ -32,6 +32,7 @@ class RobotName(enum.Enum):
     inspire = enum.auto()
     panda = enum.auto()
     xhand = enum.auto()
+    # TODO add paxini
 
 
 class RetargetingType(enum.Enum):

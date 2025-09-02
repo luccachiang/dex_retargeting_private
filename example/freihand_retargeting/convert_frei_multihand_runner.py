@@ -158,12 +158,11 @@ def run_parallel_retarget(
         robot_names = [
             RobotName.allegro,
             RobotName.shadow,
-            RobotName.dclaw,
-            RobotName.ability,
-            RobotName.bhand,
-            RobotName.leap,
             RobotName.svh,
+            RobotName.leap,
+            RobotName.ability,
             RobotName.inspire,
+            RobotName.panda,
             RobotName.xhand,
         ]
     
