@@ -47,7 +47,7 @@ python convert_frei_runner.py \
 python convert_frei_multihand_runner.py \
     --processed-dataset-path /home/guangqi/wanglab/dex-retargeting/data/freihand_processed/processed_freihand_dataset.pkl \
     --hand-type right \
-    --max-workers 16 \
+    --max-workers 8 \
     --output-dir /home/guangqi/wanglab/dex-retargeting/data/freihand_retargeting_finger_scaled \
     --retargeting-type dexpilot
     # --robot-names xhand ability inspire \
